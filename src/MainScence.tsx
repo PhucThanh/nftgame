@@ -10,6 +10,7 @@ class MainScene extends Phaser.Scene {
   private sprites: any = {};
   private state: any = {};
   private keyLock = true;
+
   init() {
     this.cameras.main.setBackgroundColor("#24252A");
   }
@@ -86,9 +87,10 @@ class MainScene extends Phaser.Scene {
         });
         const url = URL.createObjectURL(svgBlob);
         this.load
-          .image(
+          .spritesheet(
             "player" + userId,
-            "https://wiki.aavegotchi.com/socialmedia/alfredgotchiwelcome.png"
+            `${process.env.PUBLIC_URL}/player.png`,
+            { frameWidth: 50, frameHeight: 50 }
           )
           .on(
             "filecomplete",
@@ -98,13 +100,50 @@ class MainScene extends Phaser.Scene {
                 setTimeout(() => {
                   //had to add this delay for images to always show
                   this.sprites[userId] = this.physics.add
-                    .image(
+                    .sprite(
                       this.state[userId].x,
                       this.state[userId].y,
                       "player" + userId
                     )
-                    .setScale(0.5, 0.5)
+                    .setScale(1, 1)
                     .setOrigin(0, 0);
+
+                  this.anims.create({
+                    key: "down",
+                    frameRate: 5,
+                    frames: this.anims.generateFrameNumbers("player" + userId, {
+                      start: 0,
+                      end: 3,
+                    }),
+                    repeat: 1,
+                  });
+                  this.anims.create({
+                    key: "left",
+                    frameRate: 5,
+                    frames: this.anims.generateFrameNumbers("player" + userId, {
+                      start: 4,
+                      end: 7,
+                    }),
+                    repeat: 1,
+                  });
+                  this.anims.create({
+                    key: "up",
+                    frameRate: 5,
+                    frames: this.anims.generateFrameNumbers("player" + userId, {
+                      start: 8,
+                      end: 11,
+                    }),
+                    repeat: 1,
+                  });
+                  this.anims.create({
+                    key: "right",
+                    frameRate: 5,
+                    frames: this.anims.generateFrameNumbers("player" + userId, {
+                      start: 12,
+                      end: 15,
+                    }),
+                    repeat: 1,
+                  });
                 }, 100);
               }
             },
@@ -112,14 +151,20 @@ class MainScene extends Phaser.Scene {
           );
         this.load.start();
       } else {
-        if (this.sprites[userId].x < this.state[userId].x)
+        if (this.sprites[userId].x < this.state[userId].x) {
           this.sprites[userId].x += 20;
-        else if (this.sprites[userId].x > this.state[userId].x)
+          this.sprites[userId].play("right");
+        } else if (this.sprites[userId].x > this.state[userId].x) {
           this.sprites[userId].x -= 20;
-        if (this.sprites[userId].y < this.state[userId].y)
+          this.sprites[userId].play("left");
+        }
+        if (this.sprites[userId].y < this.state[userId].y) {
           this.sprites[userId].y += 20;
-        else if (this.sprites[userId].y > this.state[userId].y)
+          this.sprites[userId].play("down");
+        } else if (this.sprites[userId].y > this.state[userId].y) {
           this.sprites[userId].y -= 20;
+          this.sprites[userId].play("up");
+        }
       }
     }
   }
