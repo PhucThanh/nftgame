@@ -15,20 +15,18 @@ async function stateDBReference() {
   return gameState;
 }
 
-function updateState(userId, direction) {
+function updateState(userId, direction, position) {
   logger.info("updateState ", userId, "direction ", direction);
 
   // TODO - add server-side logic to restric movements, add pickup items etc
 
   if (direction == "up") {
-    state[userId].y -= 20;
   } else if (direction == "down") {
-    state[userId].y += 20;
   } else if (direction == "left") {
-    state[userId].x -= 20;
   } else if (direction == "right") {
-    state[userId].x += 20;
   }
+  state[userId].x = position.x;
+  state[userId].y = position.y;
 }
 Moralis.Cloud.define("move", async (request) => {
   logger.info("Move called!");
@@ -38,7 +36,8 @@ Moralis.Cloud.define("move", async (request) => {
 
   // create and write to DB new version of the state
   const direction = request.params.direction;
-  updateState(userId, direction);
+  const position = request.params.position;
+  updateState(userId, direction, position);
   await persistState();
 });
 

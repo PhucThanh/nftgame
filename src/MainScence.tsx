@@ -2,7 +2,6 @@ import Moralis from "moralis";
 import background from "./images/bg.jpg";
 
 class MainScene extends Phaser.Scene {
-  private helloWorld!: Phaser.GameObjects.Text;
   private wKey!: Phaser.Input.Keyboard.Key;
   private aKey!: Phaser.Input.Keyboard.Key;
   private sKey!: Phaser.Input.Keyboard.Key;
@@ -10,63 +9,104 @@ class MainScene extends Phaser.Scene {
   private sprites: any = {};
   private state: any = {};
   private keyLock = true;
-
+  private wallLayer: any;
+  private treeLayer: any;
+  private currentId!: string;
   init() {
     this.cameras.main.setBackgroundColor("#24252A");
   }
   preload() {
     this.ping();
     this.load.image("background", background);
+    this.load.image("tiles", `${process.env.PUBLIC_URL}/tiles.png`);
+    this.load.tilemapTiledJSON("map", `${process.env.PUBLIC_URL}/tiles.json`);
   }
   async create() {
-    this.helloWorld = this.add.text(
-      this.cameras.main.centerX,
-      this.cameras.main.centerY,
-      "Hello World",
-      {
-        font: "40px Arial",
-        color: "#ffffff",
-      }
-    );
-
     this.wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     this.dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    this.add.image(0, 0, "background").setOrigin(0, 0).setScale(1, 0.8);
-    this.helloWorld.setOrigin(0.5).setDepth(10);
+    const map = this.make.tilemap({ key: "map" });
+    const tileset = map.addTilesetImage("normal", "tiles");
+    this.wallLayer = map.createLayer("Wall", tileset).setDepth(-1);
+    this.treeLayer = map.createLayer("Trees", tileset).setDepth(-2);
+    const groundLayer = map.createLayer("Ground", tileset).setDepth(-3);
+
+    this.wallLayer.setCollisionByProperty({ collide: true });
+    this.treeLayer.setCollisionByProperty({ collide: true });
+
+    this.currentId = Moralis.User.current()?.get("username");
+
     let query = new Moralis.Query("GameState");
     let subscription = await query.subscribe();
     query.equalTo("stateType", "globalGameState");
     subscription.on("update", (object) => {
       this.state = object.get("state");
-      console.log(this.state);
+      // console.log(this.state);
     });
 
     this.state = await Moralis.Cloud.run("getState");
   }
   async update() {
-    this.helloWorld.angle += 1;
+    if (
+      this.sprites[this.currentId] &&
+      this.sprites[this.currentId].setVelocityX
+    ) {
+      this.sprites[this.currentId].setVelocityX(0);
+      this.sprites[this.currentId].setVelocityY(0);
+    }
+
     if (this.wKey.isDown && this.keyLock) {
-      console.log("UP");
-      this.keyLock = false;
-      await Moralis.Cloud.run("move", { direction: "up" });
+      this.keyLock = true;
+      Moralis.Cloud.run("move", {
+        direction: "up",
+        position: {
+          x: this.sprites[this.currentId].x,
+          y: this.sprites[this.currentId].y,
+        },
+      });
+      this.sprites[this.currentId].setVelocityY(-200);
+      this.sprites[this.currentId].play("up");
       this.keyLock = true;
     }
     if (this.aKey.isDown && this.keyLock) {
       this.keyLock = false;
-      await Moralis.Cloud.run("move", { direction: "left" });
+      Moralis.Cloud.run("move", {
+        direction: "left",
+        position: {
+          x: this.sprites[this.currentId].x,
+          y: this.sprites[this.currentId].y,
+        },
+      });
+      this.sprites[this.currentId].setVelocityX(-200);
+      this.sprites[this.currentId].play("left");
       this.keyLock = true;
     }
     if (this.sKey.isDown && this.keyLock) {
       this.keyLock = false;
-      await Moralis.Cloud.run("move", { direction: "down" });
+      Moralis.Cloud.run("move", {
+        direction: "down",
+        position: {
+          x: this.sprites[this.currentId].x,
+          y: this.sprites[this.currentId].y,
+        },
+      });
+      this.sprites[this.currentId].setVelocityY(200);
+      this.sprites[this.currentId].play("down");
       this.keyLock = true;
     }
     if (this.dKey.isDown && this.keyLock) {
       this.keyLock = false;
-      await Moralis.Cloud.run("move", { direction: "right" });
+      Moralis.Cloud.run("move", {
+        direction: "right",
+        position: {
+          x: this.sprites[this.currentId].x,
+          y: this.sprites[this.currentId].y,
+        },
+      });
+      this.sprites[this.currentId].setVelocityX(200);
+      this.sprites[this.currentId].play("right");
       this.keyLock = true;
     }
     this.drawState();
@@ -90,7 +130,7 @@ class MainScene extends Phaser.Scene {
           .spritesheet(
             "player" + userId,
             `${process.env.PUBLIC_URL}/player.png`,
-            { frameWidth: 50, frameHeight: 50 }
+            { frameWidth: 32, frameHeight: 32 }
           )
           .on(
             "filecomplete",
@@ -107,7 +147,14 @@ class MainScene extends Phaser.Scene {
                     )
                     .setScale(1, 1)
                     .setOrigin(0, 0);
-
+                  this.physics.add.collider(
+                    this.sprites[userId],
+                    this.wallLayer
+                  );
+                  this.physics.add.collider(
+                    this.sprites[userId],
+                    this.treeLayer
+                  );
                   this.anims.create({
                     key: "down",
                     frameRate: 5,
@@ -115,7 +162,7 @@ class MainScene extends Phaser.Scene {
                       start: 0,
                       end: 3,
                     }),
-                    repeat: 1,
+                    repeat: 0,
                   });
                   this.anims.create({
                     key: "left",
@@ -124,7 +171,7 @@ class MainScene extends Phaser.Scene {
                       start: 4,
                       end: 7,
                     }),
-                    repeat: 1,
+                    repeat: 0,
                   });
                   this.anims.create({
                     key: "up",
@@ -133,7 +180,7 @@ class MainScene extends Phaser.Scene {
                       start: 8,
                       end: 11,
                     }),
-                    repeat: 1,
+                    repeat: 0,
                   });
                   this.anims.create({
                     key: "right",
@@ -142,7 +189,7 @@ class MainScene extends Phaser.Scene {
                       start: 12,
                       end: 15,
                     }),
-                    repeat: 1,
+                    repeat: 0,
                   });
                 }, 100);
               }
@@ -151,19 +198,23 @@ class MainScene extends Phaser.Scene {
           );
         this.load.start();
       } else {
-        if (this.sprites[userId].x < this.state[userId].x) {
-          this.sprites[userId].x += 20;
-          this.sprites[userId].play("right");
-        } else if (this.sprites[userId].x > this.state[userId].x) {
-          this.sprites[userId].x -= 20;
-          this.sprites[userId].play("left");
-        }
-        if (this.sprites[userId].y < this.state[userId].y) {
-          this.sprites[userId].y += 20;
-          this.sprites[userId].play("down");
-        } else if (this.sprites[userId].y > this.state[userId].y) {
-          this.sprites[userId].y -= 20;
-          this.sprites[userId].play("up");
+        if (userId != this.currentId) {
+          if (this.sprites[userId].y < this.state[userId].y) {
+            this.sprites[userId].play("down");
+          } else if (this.sprites[userId].y > this.state[userId].y) {
+            this.sprites[userId].play("up");
+          } else if (this.sprites[userId].x < this.state[userId].x) {
+            this.sprites[userId].play("right");
+          } else if (this.sprites[userId].x > this.state[userId].x) {
+            this.sprites[userId].play("left");
+          }
+          this.sprites[userId].y = this.state[userId].y;
+          this.sprites[userId].x = this.state[userId].x;
+        } else {
+          if (Math.abs(this.sprites[userId].x - this.state[userId].x) > 500)
+            this.sprites[userId].x = this.state[userId].x;
+          if (Math.abs(this.sprites[userId].y - this.state[userId].y) > 500)
+            this.sprites[userId].y = this.state[userId].y;
         }
       }
     }
