@@ -7,27 +7,20 @@ import { IonPhaser, GameInstance } from "@ion-phaser/react";
 import MainScene from "./MainScence";
 
 const gameConfig: GameInstance = {
-  width: "100%",
-  height: "100%",
   type: Phaser.AUTO,
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: "80%",
-    height: "80%",
-  },
-  render: {
-    antialias: false,
-    pixelArt: true,
-    roundPixels: true,
+    mode: Phaser.Scale.ScaleModes.FIT,
+    //autoCenter: Phaser.Scale.Center.CENTER_BOTH,
+    width: 1024,
+    height: 400,
   },
   physics: {
     default: "arcade",
     arcade: {
-      // gravity: { y: 400 },
       debug: false,
     },
   },
+  render: { antialias: false, pixelArt: true, roundPixels: true },
   scene: MainScene,
 };
 
@@ -35,7 +28,7 @@ function App() {
   const { authenticate, isAuthenticated, user, logout, isAuthenticating } =
     useMoralis();
   const gameRef = useRef<HTMLIonPhaserElement>(null);
-  const [game, setGame] = useState<GameInstance>();
+  const [game, setGame] = useState<GameInstance>(gameConfig);
   const [initialize, setInitialize] = useState(false);
 
   useEffect(() => {
@@ -45,7 +38,7 @@ function App() {
   const destroy = () => {
     gameRef.current?.destroy();
     setInitialize(false);
-    setGame(undefined);
+    //setGame(undefined);
   };
   useEffect(() => {
     if (initialize) {
