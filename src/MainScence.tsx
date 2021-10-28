@@ -1,8 +1,9 @@
 import Moralis from "moralis";
-import tiles from "./images/tiles.png";
 import grass from "./assets/grass.png";
 import road from "./assets/road.png";
 import buildings from "./assets/buildings.png";
+import decors from "./assets/decor.png";
+import trees from "./assets/tree.png";
 import village from "./tiles/village.json";
 import playerSprite from "./assets/player.png";
 
@@ -14,10 +15,10 @@ class MainScene extends Phaser.Scene {
   private sprites: any = {};
   private state: any = {};
   private wallLayer!: Phaser.Tilemaps.TilemapLayer;
-  private treeLayer: any;
+  private treeLayer!: Phaser.Tilemaps.TilemapLayer;
   private currentId!: string;
   private timer = 0;
-  private road!: any;
+  private buildingMasks: Phaser.GameObjects.Rectangle[] = [];
 
   init() {
     this.cameras.main.setBackgroundColor("#24252A");
@@ -26,14 +27,14 @@ class MainScene extends Phaser.Scene {
     this.ping();
     this.load.image("grass", grass);
     this.load.image("road", road);
+    this.load.image("decors", decors);
+    this.load.image("trees", trees);
     this.load.image("buildings", buildings);
-    this.load.image("tiles", tiles);
-    // this.load.tilemapTiledJSON("map", `${process.env.PUBLIC_URL}/tiles.json`);
     this.load.tilemapTiledJSON("map", village);
   }
   async create() {
     this.currentId = Moralis.User.current()?.get("username");
-    this.cameras.main.zoom = 0.4;
+    this.cameras.main.zoom = 0.3;
 
     //@ts-ignore
     document.getElementById("phaser-container").style.width = "99%";
@@ -50,96 +51,69 @@ class MainScene extends Phaser.Scene {
     });
     const grassTileset = map.addTilesetImage("grass", "grass", 256, 256);
     const roadTileset = map.addTilesetImage("road", "road", 256, 256);
-    const buildingTileset = map.addTilesetImage(
-      "buildings",
-      "buildings",
-      843,
-      874
-    );
+    const buildingTileset = map.addTilesetImage("buildings", "buildings");
+    const treeTileset = map.addTilesetImage("tree", "trees");
+    const decorTileset = map.addTilesetImage("decors", "decors");
 
     const land = map.createLayer("Land", grassTileset).setDepth(-3);
-    this.road = map.createLayer("Road", roadTileset).setDepth(-2);
+    const road = map.createLayer("Road", roadTileset).setDepth(-2);
+    const decors = map.createLayer("Decor", decorTileset).setDepth(0);
 
-    this.wallLayer = map.createLayer("Building", buildingTileset);
-    this.wallLayer.setCollisionFromCollisionGroup();
+    this.wallLayer = map.createLayer("Building", buildingTileset).setDepth(2);
+    this.wallLayer.setX(0);
+    this.wallLayer.setY(-874 + 256);
+    this.treeLayer = map.createLayer("Tree", treeTileset).setDepth(1);
+    this.treeLayer.setY(-423);
+    this.cameras.main.setBounds(-300, -300, land.width, land.height);
 
-    var graphics = this.add.graphics();
-    this.wallLayer.forEachTile((tile) => {
-      var tileWorldPos = this.wallLayer.tileToWorldXY(tile.x, tile.y);
-      var collisionGroup = buildingTileset.getTileCollisionGroup(tile.index);
-      console.log(buildingTileset);
-      //@ts-ignore
-      if (!collisionGroup || collisionGroup.objects.length === 0) {
-        return;
-      }
-
-      // You can assign custom properties to the whole collision object layer (or even to
-      // individual objects within the layer). Here, use a custom property to change the color of
-      // the stroke.
-      //@ts-ignore
-      if (
+    const createReacts = (
+      layer: Phaser.Tilemaps.TilemapLayer,
+      tileSet: Phaser.Tilemaps.Tileset
+    ) => {
+      layer.forEachTile((tile) => {
+        var tileWorldPos = layer.tileToWorldXY(tile.x, tile.y);
+        var collisionGroup = tileSet.getTileCollisionGroup(tile.index);
         //@ts-ignore
-        collisionGroup.properties &&
-        //@ts-ignore
-        collisionGroup.properties.isInteractive
-      ) {
-        graphics.lineStyle(5, 0x00ff00, 1);
-      } else {
-        graphics.lineStyle(5, 0x00ffff, 1);
-      }
-
-      // The group will have an array of objects - these are the individual collision shapes
-      //@ts-ignore
-      var objects = collisionGroup.objects;
-
-      for (var i = 0; i < objects.length; i++) {
-        var object = objects[i];
-        var objectX = tileWorldPos.x + object.x;
-        var objectY = tileWorldPos.y + object.y;
-
-        // When objects are parsed by Phaser, they will be guaranteed to have one of the
-        // following properties if they are a rectangle/ellipse/polygon/polyline.
-        if (object.rectangle) {
-          graphics.strokeRect(objectX, objectY, object.width, object.height);
-        } else if (object.ellipse) {
-          // Ellipses in Tiled have a top-left origin, while ellipses in Phaser have a center
-          // origin
-          graphics.strokeEllipse(
-            objectX + object.width / 2,
-            objectY + object.height / 2,
-            object.width,
-            object.height
-          );
-        } else if (object.polygon || object.polyline) {
-          var originalPoints = object.polygon
-            ? object.polygon
-            : object.polyline;
-          var points = [];
-          for (var j = 0; j < originalPoints.length; j++) {
-            var point = originalPoints[j];
-            points.push({
-              x: objectX + point.x,
-              y: objectY + point.y,
-            });
-          }
-          graphics.strokePoints(points);
+        if (!collisionGroup || collisionGroup.objects.length === 0) {
+          return;
         }
-      }
-    });
+        // The group will have an array of objects - these are the individual collision shapes
+        //@ts-ignore
+        var objects = collisionGroup.objects;
+        for (var i = 0; i < objects.length; i++) {
+          var object = objects[i];
+          var objectX = tileWorldPos.x + object.x;
+          var objectY = tileWorldPos.y + object.y;
+          // When objects are parsed by Phaser, they will be guaranteed to have one of the
+          // following properties if they are a rectangle/ellipse/polygon/polyline.
+          if (object.rectangle) {
+            //graphics.strokeRect(objectX, objectY, object.width, object.height);
+            const r = this.add
+              .rectangle(objectX, objectY, object.width, object.height, 0, 0)
+              .setOrigin(0, 0);
+            //r.setStrokeStyle(10, 0xefc53f);
+            this.physics.add.existing(r, true);
+            this.buildingMasks.push(r);
+          }
+        }
+      });
+    };
 
+    createReacts(this.wallLayer, buildingTileset);
+    createReacts(this.treeLayer, treeTileset);
+    createReacts(decors, decorTileset);
     let query = new Moralis.Query("GameState");
     let subscription = await query.subscribe();
     query.equalTo("stateType", "globalGameState");
     subscription.on("update", (object) => {
       this.state = object.get("state");
-      //console.log(this.state);
     });
 
     this.state = await Moralis.Cloud.run("getState");
   }
   async update(time: any, delta: any) {
     this.timer++;
-    if (this.timer > 10 && this.sprites[this.currentId]) {
+    if (this.timer > 5 && this.sprites[this.currentId]) {
       Moralis.Cloud.run("move", {
         direction: "right",
         position: {
@@ -159,7 +133,7 @@ class MainScene extends Phaser.Scene {
     }
 
     if (this.wKey.isDown) {
-      this.sprites[this.currentId].setVelocityY(-500);
+      this.sprites[this.currentId].setVelocityY(-800);
       if (
         !this.sprites[this.currentId].anims.isPlaying ||
         this.sprites[this.currentId].anims.currentAnim.key != "up"
@@ -167,7 +141,7 @@ class MainScene extends Phaser.Scene {
         this.sprites[this.currentId].play("up");
       }
     } else if (this.aKey.isDown) {
-      this.sprites[this.currentId].setVelocityX(-500);
+      this.sprites[this.currentId].setVelocityX(-800);
       if (
         !this.sprites[this.currentId].anims.isPlaying ||
         this.sprites[this.currentId].anims.currentAnim.key != "left"
@@ -175,7 +149,7 @@ class MainScene extends Phaser.Scene {
         this.sprites[this.currentId].play("left");
       }
     } else if (this.sKey.isDown) {
-      this.sprites[this.currentId].setVelocityY(500);
+      this.sprites[this.currentId].setVelocityY(800);
       if (
         !this.sprites[this.currentId].anims.isPlaying ||
         this.sprites[this.currentId].anims.currentAnim.key != "down"
@@ -183,7 +157,7 @@ class MainScene extends Phaser.Scene {
         this.sprites[this.currentId].play("down");
       }
     } else if (this.dKey.isDown) {
-      this.sprites[this.currentId].setVelocityX(500);
+      this.sprites[this.currentId].setVelocityX(800);
       if (
         !this.sprites[this.currentId].anims.isPlaying ||
         this.sprites[this.currentId].anims.currentAnim.key != "right"
@@ -203,11 +177,10 @@ class MainScene extends Phaser.Scene {
       // new player that we haven't seen - need to load image, create sprite
       if (!this.sprites[userId]) {
         this.sprites[userId] = { loading: true };
-
-        const svgBlob = new Blob([this.state[userId].svg], {
-          type: "image/svg+xml;charset=utf-8",
-        });
-        const url = URL.createObjectURL(svgBlob);
+        // const svgBlob = new Blob([this.state[userId].svg], {
+        //   type: "image/svg+xml;charset=utf-8",
+        // });
+        // const url = URL.createObjectURL(svgBlob);
         this.load
           .spritesheet("player" + userId, playerSprite, {
             frameWidth: 192,
@@ -266,11 +239,11 @@ class MainScene extends Phaser.Scene {
                     repeat: 0,
                   });
                   this.sprites[userId].play("down");
-
                   this.physics.add.collider(
                     this.sprites[userId],
-                    this.wallLayer
+                    this.buildingMasks
                   );
+                  // this.sprites[userId].body.setSize(100, 150, 50, 25);
                 }, 200);
               }
             },

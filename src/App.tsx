@@ -46,10 +46,10 @@ const gameConfig: GameInstance = {
   physics: {
     default: "arcade",
     arcade: {
-      debug: true,
+      debug: false,
     },
   },
-  render: { antialias: false, pixelArt: true, roundPixels: true },
+  render: { antialias: true, pixelArt: true, roundPixels: true },
   scene: MainScene,
 };
 
