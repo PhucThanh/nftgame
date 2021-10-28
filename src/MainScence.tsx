@@ -140,13 +140,13 @@ class MainScene extends Phaser.Scene {
   async update(time: any, delta: any) {
     this.timer++;
     if (this.timer > 10 && this.sprites[this.currentId]) {
-      // Moralis.Cloud.run("move", {
-      //   direction: "right",
-      //   position: {
-      //     x: this.sprites[this.currentId].x,
-      //     y: this.sprites[this.currentId].y,
-      //   },
-      // });
+      Moralis.Cloud.run("move", {
+        direction: "right",
+        position: {
+          x: this.sprites[this.currentId].x,
+          y: this.sprites[this.currentId].y,
+        },
+      });
       this.timer = 0;
     }
 
