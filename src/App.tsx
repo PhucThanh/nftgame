@@ -68,18 +68,14 @@ function App() {
   const destroy = () => {
     gameRef.current?.destroy();
     setInitialize(false);
-    //setGame(undefined);
+    setGame(undefined);
   };
   useEffect(() => {
     if (initialize) {
       setGame(Object.assign({}, gameConfig));
     }
   }, [initialize]);
-  return (
-    <div id="phaser-container" style={{ height: "100vh", width: { width } }}>
-      <IonPhaser ref={gameRef} game={game} />
-    </div>
-  );
+
   if (!isAuthenticated) {
     return (
       <div>
@@ -99,7 +95,12 @@ function App() {
 
       {initialize ? (
         <>
-          <IonPhaser ref={gameRef} game={game} initialize={initialize} />
+          <div
+            id="phaser-container"
+            style={{ height: "100vh", width: { width } }}
+          >
+            <IonPhaser ref={gameRef} game={game} initialize={initialize} />
+          </div>
           <div onClick={destroy} className="flex destroyButton">
             <a href="#1" className="bttn">
               End game
