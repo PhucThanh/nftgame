@@ -4,8 +4,10 @@ import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { MoralisProvider } from "react-moralis";
-const SERVER_URL = "https://c4khtpurgb5e.usemoralis.com:2053/server";
-const APP_ID = "zkZiBp4Un3L9Ez3Iv3AVlL1UCT0OnMtQnHv915Xo";
+//const SERVER_URL = "https://c4khtpurgb5e.usemoralis.com:2053/server";
+//const APP_ID = "zkZiBp4Un3L9Ez3Iv3AVlL1UCT0OnMtQnHv915Xo";
+const SERVER_URL = "https://f3n77lcn2azn.usemoralis.com:2053/server";
+const APP_ID = "AOjUKGNBwoDhwYc8JKatRjw9euB0zvCIVnwK2SmJ";
 ReactDOM.render(
   <React.StrictMode>
     <MoralisProvider appId={APP_ID} serverUrl={SERVER_URL}>
